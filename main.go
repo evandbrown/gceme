@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/gcloud-golang/compute/metadata"
 )
@@ -20,77 +22,31 @@ type Instance struct {
 	Project    string
 	InternalIP string
 	ExternalIP string
+	LBRequest  string
+	ClientIP   string
 	Error      string
 }
 
 const (
-	html = `<!doctype html>
-<html>
-<head>
-<!-- Compiled and minified CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.0/css/materialize.min.css">
-
-<!-- Compiled and minified JavaScript -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.0/js/materialize.min.js"></script>
-<title>Frontend Web Server</title>
-</head>
-<body>
-<div class="container">
-<div class="row">
-<div class="col s3">&nbsp;</div>
-<div class="col s6">
-<table class="bordered striped hoverable">
-  <thead>
-	<tr>
-		<th data-field="prop">Property</th>
-		<th data-field="value">Value</th>
-	</tr>
-  </thead>
-
-  <tbody>
-	<tr>
-	  <td>Name</td>
-	  <td>{{.Name}}</td>
-	</tr>
-	<tr>
-	  <td>ID</td>
-	  <td>{{.Id}}</td>
-	</tr>
-	<tr>
-	  <td>Hostname</td>
-	  <td>{{.Hostname}}</td>
-	</tr>
-	<tr>
-	  <td>Zone</td>
-	  <td>{{.Zone}}</td>
-	</tr>
-	<tr>
-	  <td>Project</td>
-	  <td>{{.Project}}</td>
-	</tr>
-	<tr>
-	  <td>InternalIP</td>
-	  <td>{{.InternalIP}}</td>
-	</tr>
-	<tr>
-	  <td>ExternalIP</td>
-	  <td>{{.ExternalIP}}</td>
-	</tr>
-	  </tbody>
-</table>
-</div>
-<div class="col s3">&nbsp;</div>
-</div>
-</div>
-</html>`
+	maxconn = 512
 )
 
-func main() {
+var version string
 
+func main() {
+	c := make(chan struct{}, maxconn)
+	client := &http.Client{}
+
+	version := flag.Bool("version", false, "display version")
 	frontend := flag.Bool("frontend", false, "run in frontend mode")
 	port := flag.Int("port", 8080, "port to bind")
 	backend := flag.String("backend-service", "", "hostname of backend server")
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("Version %s\n", version)
+		return
+	}
 
 	if *frontend {
 		log.Println("Operating in frontend mode...")
@@ -100,22 +56,26 @@ func main() {
 		}
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			resp, err := http.Get(*backend)
+			c <- struct{}{}
+			i := &Instance{}
+			resp, err := client.Get(*backend)
+			defer resp.Body.Close()
 			if err != nil {
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
 				return
 			}
-
-			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
 				return
 			}
-
-			i := &Instance{}
-			json.Unmarshal([]byte(body), i)
+			err = json.Unmarshal([]byte(body), i)
+			if err != nil {
+				fmt.Fprintf(w, "Error: %s\n", err.Error())
+				return
+			}
 			tpl.Execute(w, i)
+			<-c
 		})
 
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
@@ -123,6 +83,7 @@ func main() {
 	} else {
 		log.Println("Operating in backend mode...")
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			c <- struct{}{}
 			a := &assigner{}
 			i := newInstance()
 			i.Id = a.assign(metadata.InstanceID)
@@ -132,10 +93,14 @@ func main() {
 			i.Project = a.assign(metadata.ProjectID)
 			i.InternalIP = a.assign(metadata.InternalIP)
 			i.ExternalIP = a.assign(metadata.ExternalIP)
-
 			if a.err != nil {
 				i.Error = a.err.Error()
 			}
+
+			raw, _ := httputil.DumpRequest(r, true)
+			i.LBRequest = string(raw)
+
+			i.ClientIP = strings.Split(r.RemoteAddr, ":")[0]
 
 			resp, err := json.Marshal(i)
 			if err != nil {
@@ -143,6 +108,7 @@ func main() {
 			}
 
 			fmt.Fprintf(w, "%s", resp)
+			<-c
 		})
 
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
