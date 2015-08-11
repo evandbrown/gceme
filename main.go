@@ -31,7 +31,7 @@ const (
 	maxconn = 512
 )
 
-var version string
+var Version string = "version"
 
 func main() {
 	c := make(chan struct{}, maxconn)
@@ -44,7 +44,7 @@ func main() {
 	flag.Parse()
 
 	if *showversion {
-		fmt.Printf("Version %s\n", version)
+		fmt.Printf("Version %s\n", Version)
 		return
 	}
 
