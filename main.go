@@ -28,7 +28,7 @@ type Instance struct {
 }
 
 const (
-	maxconn = 128
+	maxconn = 1024
 )
 
 var Version string = "version"
