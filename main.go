@@ -37,13 +37,13 @@ func main() {
 	c := make(chan struct{}, maxconn)
 	client := &http.Client{}
 
-	version := flag.Bool("version", false, "display version")
+	showversion := flag.Bool("version", false, "display version")
 	frontend := flag.Bool("frontend", false, "run in frontend mode")
 	port := flag.Int("port", 8080, "port to bind")
 	backend := flag.String("backend-service", "", "hostname of backend server")
 	flag.Parse()
 
-	if *version {
+	if *showversion {
 		fmt.Printf("Version %s\n", version)
 		return
 	}
