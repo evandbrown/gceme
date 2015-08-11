@@ -28,7 +28,7 @@ type Instance struct {
 }
 
 const (
-	maxconn = 512
+	maxconn = 128
 )
 
 var Version string = "version"
@@ -59,11 +59,11 @@ func main() {
 			c <- struct{}{}
 			i := &Instance{}
 			resp, err := client.Get(*backend)
-			defer resp.Body.Close()
 			if err != nil {
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
 				return
 			}
+			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
