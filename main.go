@@ -60,17 +60,20 @@ func main() {
 			i := &Instance{}
 			resp, err := client.Get(*backend)
 			if err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
 				return
 			}
 			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
 				return
 			}
 			err = json.Unmarshal([]byte(body), i)
 			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
 				return
 			}
@@ -81,18 +84,21 @@ func main() {
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
 
 	} else {
+
+		a := &assigner{}
+		i := newInstance()
+		i.Id = a.assign(metadata.InstanceID)
+		i.Zone = a.assign(metadata.Zone)
+		i.Name = a.assign(metadata.InstanceName)
+		i.Hostname = a.assign(metadata.Hostname)
+		i.Project = a.assign(metadata.ProjectID)
+		i.InternalIP = a.assign(metadata.InternalIP)
+		i.ExternalIP = a.assign(metadata.ExternalIP)
+
 		log.Println("Operating in backend mode...")
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			c <- struct{}{}
-			a := &assigner{}
-			i := newInstance()
-			i.Id = a.assign(metadata.InstanceID)
-			i.Zone = a.assign(metadata.Zone)
-			i.Name = a.assign(metadata.InstanceName)
-			i.Hostname = a.assign(metadata.Hostname)
-			i.Project = a.assign(metadata.ProjectID)
-			i.InternalIP = a.assign(metadata.InternalIP)
-			i.ExternalIP = a.assign(metadata.ExternalIP)
+
 			if a.err != nil {
 				i.Error = a.err.Error()
 			}
