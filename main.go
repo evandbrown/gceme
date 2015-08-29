@@ -27,14 +27,9 @@ type Instance struct {
 	Error      string
 }
 
-const (
-	maxconn = 4096
-)
-
 var Version string = "version"
 
 func main() {
-	c := make(chan struct{}, maxconn)
 	client := &http.Client{}
 
 	showversion := flag.Bool("version", false, "display version")
@@ -56,7 +51,6 @@ func main() {
 		}
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			c <- struct{}{}
 			i := &Instance{}
 			resp, err := client.Get(*backend)
 			if err != nil {
@@ -78,7 +72,6 @@ func main() {
 				return
 			}
 			tpl.Execute(w, i)
-			<-c
 		})
 
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
@@ -97,8 +90,6 @@ func main() {
 
 		log.Println("Operating in backend mode...")
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			c <- struct{}{}
-
 			if a.err != nil {
 				i.Error = a.err.Error()
 			}
@@ -114,7 +105,6 @@ func main() {
 			}
 
 			fmt.Fprintf(w, "%s", resp)
-			<-c
 		})
 
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
