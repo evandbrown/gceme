@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"runtime"
 	"strings"
 
 	"github.com/GoogleCloudPlatform/gcloud-golang/compute/metadata"
@@ -30,6 +31,8 @@ type Instance struct {
 var Version string = "version"
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	client := &http.Client{}
 
 	showversion := flag.Bool("version", false, "display version")
