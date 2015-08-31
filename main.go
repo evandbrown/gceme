@@ -8,9 +8,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
+	//"net/http/httputil"
 	"runtime"
-	"strings"
+	//"strings"
 
 	"github.com/GoogleCloudPlatform/gcloud-golang/compute/metadata"
 )
@@ -33,8 +33,6 @@ var Version string = "version"
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	client := &http.Client{}
-
 	showversion := flag.Bool("version", false, "display version")
 	frontend := flag.Bool("frontend", false, "run in frontend mode")
 	port := flag.Int("port", 8080, "port to bind")
@@ -48,14 +46,20 @@ func main() {
 
 	if *frontend {
 		log.Println("Operating in frontend mode...")
-		tpl, err := template.New("out").Parse(html)
-		if err != nil {
-			panic(err)
-		}
+		tpl := template.Must(template.New("out").Parse(html))
+
+		transport := http.Transport{DisableKeepAlives: false}
+		client := &http.Client{Transport: &transport}
+		req, _ := http.NewRequest(
+			"GET",
+			*backend,
+			nil,
+		)
+		req.Close = false
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			i := &Instance{}
-			resp, err := client.Get(*backend)
+			resp, err := client.Do(req)
 			if err != nil {
 				w.WriteHeader(http.StatusServiceUnavailable)
 				fmt.Fprintf(w, "Error: %s\n", err.Error())
@@ -90,6 +94,7 @@ func main() {
 		i.Project = a.assign(metadata.ProjectID)
 		i.InternalIP = a.assign(metadata.InternalIP)
 		i.ExternalIP = a.assign(metadata.ExternalIP)
+		resp, _ := json.Marshal(i)
 
 		log.Println("Operating in backend mode...")
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -97,15 +102,8 @@ func main() {
 				i.Error = a.err.Error()
 			}
 
-			raw, _ := httputil.DumpRequest(r, true)
-			i.LBRequest = string(raw)
-
-			i.ClientIP = strings.Split(r.RemoteAddr, ":")[0]
-
-			resp, err := json.Marshal(i)
-			if err != nil {
-				fmt.Fprint(w, err.Error())
-			}
+			//raw, _ := httputil.DumpRequest(r, true)
+			//i.LBRequest = string(raw)
 
 			fmt.Fprintf(w, "%s", resp)
 		})
