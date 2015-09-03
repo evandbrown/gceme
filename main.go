@@ -9,10 +9,9 @@ import (
 	"log"
 	"net/http"
 	//"net/http/httputil"
-	"runtime"
 	//"strings"
 
-	"github.com/GoogleCloudPlatform/gcloud-golang/compute/metadata"
+	"google.golang.org/cloud/compute/metadata"
 )
 
 type Instance struct {
@@ -31,8 +30,6 @@ type Instance struct {
 var Version string = "version"
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	showversion := flag.Bool("version", false, "display version")
 	frontend := flag.Bool("frontend", false, "run in frontend mode")
 	port := flag.Int("port", 8080, "port to bind")
