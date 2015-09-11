@@ -41,68 +41,62 @@ func main() {
 	}
 
 	if *frontend {
-		log.Println("Operating in frontend mode...")
-		tpl := template.Must(template.New("out").Parse(html))
-
-		transport := http.Transport{DisableKeepAlives: false}
-		client := &http.Client{Transport: &transport}
-		req, _ := http.NewRequest(
-			"GET",
-			*backend,
-			nil,
-		)
-		req.Close = false
-
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			i := &Instance{}
-			resp, err := client.Do(req)
-			if err != nil {
-				w.WriteHeader(http.StatusServiceUnavailable)
-				fmt.Fprintf(w, "Error: %s\n", err.Error())
-				return
-			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "Error: %s\n", err.Error())
-				return
-			}
-			err = json.Unmarshal([]byte(body), i)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "Error: %s\n", err.Error())
-				return
-			}
-			tpl.Execute(w, i)
-		})
-
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
-
+		serveFrontend(*port, *backend)
 	} else {
-		a := &assigner{}
-		log.Println("Operating in backend mode...")
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			i := newInstance()
-			i.Id = a.assign(metadata.InstanceID)
-			i.Zone = a.assign(metadata.Zone)
-			i.Name = a.assign(metadata.InstanceName)
-			i.Hostname = a.assign(metadata.Hostname)
-			i.Project = a.assign(metadata.ProjectID)
-			i.InternalIP = a.assign(metadata.InternalIP)
-			i.ExternalIP = a.assign(metadata.ExternalIP)
-			resp, _ := json.Marshal(i)
-			if a.err != nil {
-				i.Error = a.err.Error()
-			}
-
-			raw, _ := httputil.DumpRequest(r, true)
-			i.LBRequest = string(raw)
-
-			fmt.Fprintf(w, "%s", resp)
-		})
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
+		serveBackend(*port)
 	}
+}
+func serveBackend(port int) {
+	log.Println("Operating in backend mode...")
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		i := newInstance()
+		raw, _ := httputil.DumpRequest(r, true)
+		i.LBRequest = string(raw)
+		resp, _ := json.Marshal(i)
+		fmt.Fprintf(w, "%s", resp)
+	})
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+
+}
+func serveFrontend(port int, backendURL string) {
+	log.Println("Operating in frontend mode...")
+	tpl := template.Must(template.New("out").Parse(html))
+
+	transport := http.Transport{DisableKeepAlives: false}
+	client := &http.Client{Transport: &transport}
+	req, _ := http.NewRequest(
+		"GET",
+		backendURL,
+		nil,
+	)
+	req.Close = false
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		i := &Instance{}
+		resp, err := client.Do(req)
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, "Error: %s\n", err.Error())
+			return
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Error: %s\n", err.Error())
+			return
+		}
+		err = json.Unmarshal([]byte(body), i)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Error: %s\n", err.Error())
+			return
+		}
+		tpl.Execute(w, i)
+	})
+
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+
 }
 
 type assigner struct {
@@ -122,5 +116,22 @@ func (a *assigner) assign(getVal func() (string, error)) string {
 
 func newInstance() *Instance {
 	var i = new(Instance)
+	if !metadata.OnGCE() {
+		i.Error = "Not running on GCE"
+		return i
+	}
+
+	a := &assigner{}
+	i.Id = a.assign(metadata.InstanceID)
+	i.Zone = a.assign(metadata.Zone)
+	i.Name = a.assign(metadata.InstanceName)
+	i.Hostname = a.assign(metadata.Hostname)
+	i.Project = a.assign(metadata.ProjectID)
+	i.InternalIP = a.assign(metadata.InternalIP)
+	i.ExternalIP = a.assign(metadata.ExternalIP)
+
+	if a.err != nil {
+		i.Error = a.err.Error()
+	}
 	return i
 }
