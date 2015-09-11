@@ -8,8 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	//"net/http/httputil"
-	//"strings"
+	"net/http/httputil"
 
 	"google.golang.org/cloud/compute/metadata"
 )
@@ -81,33 +80,29 @@ func main() {
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
 
 	} else {
-
 		a := &assigner{}
-		i := newInstance()
-		i.Id = a.assign(metadata.InstanceID)
-		i.Zone = a.assign(metadata.Zone)
-		i.Name = a.assign(metadata.InstanceName)
-		i.Hostname = a.assign(metadata.Hostname)
-		i.Project = a.assign(metadata.ProjectID)
-		i.InternalIP = a.assign(metadata.InternalIP)
-		i.ExternalIP = a.assign(metadata.ExternalIP)
-		resp, _ := json.Marshal(i)
-
 		log.Println("Operating in backend mode...")
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			i := newInstance()
+			i.Id = a.assign(metadata.InstanceID)
+			i.Zone = a.assign(metadata.Zone)
+			i.Name = a.assign(metadata.InstanceName)
+			i.Hostname = a.assign(metadata.Hostname)
+			i.Project = a.assign(metadata.ProjectID)
+			i.InternalIP = a.assign(metadata.InternalIP)
+			i.ExternalIP = a.assign(metadata.ExternalIP)
+			resp, _ := json.Marshal(i)
 			if a.err != nil {
 				i.Error = a.err.Error()
 			}
 
-			//raw, _ := httputil.DumpRequest(r, true)
-			//i.LBRequest = string(raw)
+			raw, _ := httputil.DumpRequest(r, true)
+			i.LBRequest = string(raw)
 
 			fmt.Fprintf(w, "%s", resp)
 		})
-
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), nil))
 	}
-
 }
 
 type assigner struct {
