@@ -7,4 +7,5 @@ gceme:
 # And watch its logs with:
 #   sudo journalctl -f -u gobuild.service
 upload: gceme
-	gsutil cp -a public-read out/linux_amd64/gceme gs://evandbrown17/gceme
+	gsutil cp -a public-read out/linux/gceme gs://evandbrown17/linux/gceme
+	gsutil cp -a public-read out/darwin/gceme gs://evandbrown17/darwin/gceme
