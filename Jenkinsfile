@@ -1,7 +1,9 @@
 node('docker') {
+  checkout scm
+  def rev = sh 'git rev-parse HEAD'
+
   stage 'test'
   docker.image('golang:1.5.1').inside('-v /home/jenkins-agent/workspace/$JOB_NAME:/usr/src/JOB_NAME -w /usr/src/JOB_NAME') {
-    checkout scm
     sh 'go get -d -v'
     sh 'go test'
   }
