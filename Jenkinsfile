@@ -9,6 +9,6 @@ node('docker') {
 
   stage 'package'
   sh 'gcloud docker -a'
-  def img = docker.build('gcr.io/evandbrown17/gceme')
+  def img = docker.build("gcr.io/evandbrown17/gceme:${env.BUILD_TAG}")
   img.push()
 }
