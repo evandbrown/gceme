@@ -1,15 +1,13 @@
 node('docker') {
   checkout scm
-  def go = docker.image 'golang:1.5.1'
+
   stage 'test'
-  go.inside {
+  docker.image('golang:1.5.1').inside {
     sh 'go get -d -v'
     sh 'go test'
   }
 
   stage 'package'
   sh 'gcloud docker -a'
-  def img = docker.image("golang:1.5.1").build("gcr.io/evandbrown17/gceme")
-  img.push()
-  img.push 'latest'
+  docker.build('gcr.io/evandbrown17/gceme').push()
 }
