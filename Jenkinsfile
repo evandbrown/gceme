@@ -10,5 +10,6 @@ node('docker') {
 
   stage 'package'
   sh 'gcloud docker -a'
+  docker.build('gcr.io/evandbrown17/gceme:${rev}').push()
   docker.build('gcr.io/evandbrown17/gceme:latest').push()
 }
