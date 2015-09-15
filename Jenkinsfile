@@ -9,7 +9,7 @@ node('docker') {
 
   stage 'package'
   sh 'gcloud docker -a'
-  def img = docker.image("golang:1.5.1").build("gcr.io/evandbrown17/gceme:latest")
+  def img = docker.image("golang:1.5.1").build("gcr.io/evandbrown17/gceme")
   img.push()
   img.push 'latest'
 }
