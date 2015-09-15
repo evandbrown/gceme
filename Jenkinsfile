@@ -9,7 +9,7 @@ node('docker') {
 
   stage 'package'
   sh 'gcloud docker -a'
-  def img = go.build "gcr.io/evandbrown17/gceme:${env.BUILD_TAG}"
+  def img = go.build "gcr.io/evandbrown17/gceme:latest"
   img.push()
   img.push 'latest'
 }
