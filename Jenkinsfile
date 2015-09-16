@@ -3,7 +3,7 @@ node('docker') {
 
   // Kubernetes cluster info
   def cluster = 'jenkins'
-  def zone = sh 'curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/zone" | grep -o [[:alnum:]-]*$'
+  def zone = 'us-central1-f'
 
   // Run tests
   stage 'Go tests'
