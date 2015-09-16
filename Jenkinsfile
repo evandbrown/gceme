@@ -21,8 +21,8 @@ node('docker') {
   // Deploy image to cluster in dev namespace
   stage 'Deploy to QA cluster'
   docker.image('google/cloud-sdk').inside {
+    sh('gcloud components update kubectl')
     sh("gcloud container clusters get-credentials ${cluster} --zone ${zone}")
-    sh('gcloud components update kubectl --quiet')
     sh("kubectl --namespace=development rollingupdate gceme-frontend --image=${img.id}")
     sh("kubectl --namespace=development rollingupdate gceme-backend --image=${img.id}")
   }
