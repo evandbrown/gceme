@@ -20,8 +20,9 @@ node('docker') {
 
   // Deploy image to cluster in dev namespace
   stage 'Deploy to QA cluster'
-  docker.image('buildpack-deps:jessie-scm').inside {
-    sh("wget https://storage.googleapis.com/kubernetes-release/release/v1.0.1/bin/linux/amd64/kubectl -O /usr/bin/kubectl")
+  docker.image('google/cloud-sdk').inside {
+    sh('apt-get update -y ; apt-get install -y curl')
+    sh('curl -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.0.1/bin/linux/amd64/kubectl')
     sh("gcloud container clusters get-credentials ${cluster} --zone ${zone}")
     sh("kubectl --namespace=development rollingupdate gceme-frontend --image=${img.id}")
     sh("kubectl --namespace=development rollingupdate gceme-backend --image=${img.id}")
