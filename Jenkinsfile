@@ -27,7 +27,7 @@ node('docker') {
     sh('curl -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.0.1/bin/linux/amd64/kubectl ; chmod +x /usr/bin/kubectl')
     sh("kubectl --namespace=development rollingupdate gceme-frontend --image=${img.id}")
     sh("kubectl --namespace=development rollingupdate gceme-backend --image=${img.id}")
-    sh("echo http://$(kubectl --namespace=development get service/gceme --output=json | jq -r '.status.loadBalancer.ingress[0].ip') > staging")
+    sh("echo http://`kubectl --namespace=development get service/gceme --output=json | jq -r '.status.loadBalancer.ingress[0].ip'` > staging")
     def url = readFile('staging').trim()
   }
 
