@@ -14,8 +14,8 @@ node('docker') {
 
   // Build image with Go binary
   stage 'Build Docker image'
-  sh('gcloud docker -a')
   def img = docker.build("gcr.io/evandbrown17/gceme:${env.BUILD_TAG}")
+  sh('gcloud docker -a')
   img.push()
 
   // Deploy image to cluster in dev namespace
@@ -25,13 +25,15 @@ node('docker') {
     sh('export CLOUDSDK_CORE_DISABLE_PROMPTS=1 ; curl https://sdk.cloud.google.com | bash')
     sh("/root/google-cloud-sdk/bin/gcloud container clusters get-credentials ${cluster} --zone ${zone}")
     sh('curl -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.0.1/bin/linux/amd64/kubectl ; chmod +x /usr/bin/kubectl')
-    sh("kubectl --namespace=development rollingupdate gceme-frontend --image=${img.id}")
-    sh("kubectl --namespace=development rollingupdate gceme-backend --image=${img.id}")
+    //sh("kubectl --namespace=development rollingupdate gceme-frontend --image=${img.id}")
+    //sh("kubectl --namespace=development rollingupdate gceme-backend --image=${img.id}")
     sh("echo http://`kubectl --namespace=development get service/gceme --output=json | jq -r '.status.loadBalancer.ingress[0].ip'` > staging")
-    def url = readFile('staging').trim()
   }
 
+  // Deploy to prod if approved
   stage 'Approve, deploy to prod'
+  def url = readFile('staging').trim()
   input message: "Does staging at $url look good? ", ok: "Deploy to production"
+  sh('gcloud docker -a')
   img.push('latest')
 }
