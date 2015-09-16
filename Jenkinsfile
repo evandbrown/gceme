@@ -25,8 +25,8 @@ node('docker') {
     sh('export CLOUDSDK_CORE_DISABLE_PROMPTS=1 ; curl https://sdk.cloud.google.com | bash')
     sh("/root/google-cloud-sdk/bin/gcloud container clusters get-credentials ${cluster} --zone ${zone}")
     sh('curl -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.0.1/bin/linux/amd64/kubectl ; chmod +x /usr/bin/kubectl')
-    //sh("kubectl --namespace=development rollingupdate gceme-frontend --image=${img.id}")
-    //sh("kubectl --namespace=development rollingupdate gceme-backend --image=${img.id}")
+    sh("kubectl --namespace=development rollingupdate gceme-frontend --image=${img.id}")
+    sh("kubectl --namespace=development rollingupdate gceme-backend --image=${img.id}")
     sh("echo http://`kubectl --namespace=development get service/gceme --output=json | jq -r '.status.loadBalancer.ingress[0].ip'` > staging")
   }
 
@@ -36,4 +36,13 @@ node('docker') {
   input message: "Does staging at $url look good? ", ok: "Deploy to production"
   sh('gcloud docker -a')
   img.push('latest')
+  docker.image('buildpack-deps:jessie-scm').inside {
+    sh('apt-get update -y ; apt-get install jq')
+    sh('export CLOUDSDK_CORE_DISABLE_PROMPTS=1 ; curl https://sdk.cloud.google.com | bash')
+    sh("/root/google-cloud-sdk/bin/gcloud container clusters get-credentials ${cluster} --zone ${zone}")
+    sh('curl -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.0.1/bin/linux/amd64/kubectl ; chmod +x /usr/bin/kubectl')
+    sh("kubectl --namespace=production rollingupdate gceme-frontend --image=${img.id}")
+    sh("kubectl --namespace=production rollingupdate gceme-backend --image=${img.id}")
+    sh("echo http://`kubectl --namespace=production get service/gceme --output=json | jq -r '.status.loadBalancer.ingress[0].ip'`")
+  }
 }
