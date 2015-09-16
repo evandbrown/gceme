@@ -20,7 +20,7 @@ node('docker') {
 
   // Deploy image to cluster in dev namespace
   stage 'Deploy to QA cluster'
-  docker.image('google/cloud-sdk).inside {
+  docker.image('google/cloud-sdk').inside {
     //sh('apt-get update -y ; apt-get install jq')
     //sh('export CLOUDSDK_CORE_DISABLE_PROMPTS=1 ; curl https://sdk.cloud.google.com | bash')
     //sh("/root/google-cloud-sdk/bin/gcloud container clusters get-credentials ${cluster} --zone ${zone}")
