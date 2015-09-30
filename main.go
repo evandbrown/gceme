@@ -26,27 +26,33 @@ type Instance struct {
 	Error      string
 }
 
-var Version string = "version"
+const version string = "1.0.0"
 
 func main() {
 	showversion := flag.Bool("version", false, "display version")
 	frontend := flag.Bool("frontend", false, "run in frontend mode")
 	port := flag.Int("port", 8080, "port to bind")
-	backend := flag.String("backend-service", "", "hostname of backend server")
+	backend := flag.String("backend-service", "http://127.0.0.1:8081", "hostname of backend server")
 	flag.Parse()
 
 	if *showversion {
-		fmt.Printf("Version %s\n", Version)
+		fmt.Printf("Version %s\n", version)
 		return
 	}
 
+	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, version)
+	})
+
 	if *frontend {
-		serveFrontend(*port, *backend)
+		frontendMode(*port, *backend)
 	} else {
-		serveBackend(*port)
+		backendMode(*port)
 	}
+
 }
-func serveBackend(port int) {
+
+func backendMode(port int) {
 	log.Println("Operating in backend mode...")
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		i := newInstance()
@@ -58,7 +64,8 @@ func serveBackend(port int) {
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 
 }
-func serveFrontend(port int, backendURL string) {
+
+func frontendMode(port int, backendURL string) {
 	log.Println("Operating in frontend mode...")
 	tpl := template.Must(template.New("out").Parse(html))
 
@@ -95,8 +102,18 @@ func serveFrontend(port int, backendURL string) {
 		tpl.Execute(w, i)
 	})
 
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		resp, err := client.Do(req)
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, "Backend could not be connected to: %s", err.Error())
+			return
+		}
+		defer resp.Body.Close()
+		ioutil.ReadAll(resp.Body)
+		w.WriteHeader(http.StatusOK)
+	})
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
-
 }
 
 type assigner struct {
