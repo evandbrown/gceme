@@ -41,7 +41,7 @@ func main() {
 	}
 
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, version)
+		fmt.Fprintf(w, "%s\n", version)
 	})
 
 	if *frontend {
