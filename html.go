@@ -34,7 +34,7 @@ const (
 <div class="col s8">
 
 
-<div class="card orange">
+<div class="card blue">
 <div class="card-content white-text">
 <div class="card-title">Backend that serviced this request</div>
 </div>
@@ -65,16 +65,18 @@ const (
 	  <td>Internal IP</td>
 	  <td>{{.InternalIP}}</td>
 	</tr>
+	{{ if .ExternalIP }}
 	<tr>
 	  <td>External IP</td>
 	  <td>{{.ExternalIP}}</td>
 	</tr>
+	{{ end }}
   </tbody>
 </table>
 </div>
 </div>
 
-<div class="card orange">
+<div class="card blue">
 <div class="card-content white-text">
 <div class="card-title">Proxy that handled this request</div>
 </div>
@@ -83,16 +85,18 @@ const (
   <tbody>
 	<tr>
 	  <td>Address</td>
-	  <td>{{.ClientIP}}</td>
+	  <td>{{.RemoteAddr}}</td>
 	</tr>
 	<tr>
 	  <td>Request</td>
 	  <td>{{.LBRequest}}</td>
 	</tr>
+{{ if .Error }}
 <tr>
   <td>Error</td>
   <td>{{.Error}}</td>
 </tr>
+{{ end }}
 </tbody>
 </table>
 </div>

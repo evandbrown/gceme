@@ -38,11 +38,11 @@ type Instance struct {
 	InternalIP string
 	ExternalIP string
 	LBRequest  string
-	ClientIP   string
+	RemoteAddr string
 	Error      string
 }
 
-const version string = "2.0.0"
+const Version string = "1.0.0"
 
 func main() {
 	showversion := flag.Bool("version", false, "display version")
@@ -52,12 +52,12 @@ func main() {
 	flag.Parse()
 
 	if *showversion {
-		fmt.Printf("Version %s\n", version)
+		fmt.Printf("Version %s\n", Version)
 		return
 	}
 
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "%s\n", version)
+		fmt.Fprintf(w, "%s\n", Version)
 	})
 
 	if *frontend {
@@ -74,6 +74,7 @@ func backendMode(port int) {
 		i := newInstance()
 		raw, _ := httputil.DumpRequest(r, true)
 		i.LBRequest = string(raw)
+		i.RemoteAddr = r.RemoteAddr
 		resp, _ := json.Marshal(i)
 		fmt.Fprintf(w, "%s", resp)
 	})
