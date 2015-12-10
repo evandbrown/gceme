@@ -2,9 +2,9 @@ node('docker') {
   checkout scm
 
   // Kubernetes cluster info
-  def cluster = 'cd'
+  def cluster = 'cluster0'
   def zone = 'us-central1-f'
-  def project = 'evandbrown17'
+  def project = 'containersummit'
 
   // Run tests
   stage 'Go tests'
